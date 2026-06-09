@@ -10,6 +10,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Fazprint" />
+  <meta name="application-name" content="Fazprint Attendance" />
+  <meta name="msapplication-TileColor" content="#1e3a8a" />
+  <meta name="msapplication-tap-highlight" content="no" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -2371,53 +2374,60 @@ updateOnlineStatus();
 // SERVICE WORKER REGISTRATION
 // ============================================================
 if ('serviceWorker' in navigator) {
-  const swCode = `
-const CACHE_NAME = 'fazprint-v1';
-const ASSETS = ['/'];
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)));
-  self.skipWaiting();
-});
-self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(keys =>
-    Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-  ));
-  self.clients.claim();
-});
-self.addEventListener('fetch', e => {
-  e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request).catch(() => cached))
-  );
-});`;
-  const blob = new Blob([swCode], { type: 'application/javascript' });
-  const swUrl = URL.createObjectURL(blob);
-  navigator.serviceWorker.register(swUrl).catch(e => console.warn('SW reg failed:', e));
+  const swCode = [
+    "const CACHE='fazprint-v2';",
+    "self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.add('/')));self.skipWaiting();});",
+    "self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim();});",
+    "self.addEventListener('fetch',e=>{",
+    "  if(e.request.method!=='GET')return;",
+    "  e.respondWith(caches.match(e.request).then(cached=>{",
+    "    if(cached)return cached;",
+    "    return fetch(e.request).then(res=>{",
+    "      if(res&&res.status===200&&res.type!=='opaque'){",
+    "        const cl=res.clone();caches.open(CACHE).then(c=>c.put(e.request,cl));",
+    "      }",
+    "      return res;",
+    "    }).catch(()=>cached||new Response('Offline',{status:503}));",
+    "  }));",
+    "});"
+  ].join('\n');
+  const swBlob = new Blob([swCode], { type: 'application/javascript' });
+  navigator.serviceWorker.register(URL.createObjectURL(swBlob), { scope: './' })
+    .then(r => console.log('SW OK:', r.scope))
+    .catch(e => console.warn('SW failed:', e));
 }
 
 // ============================================================
-// PWA MANIFEST
+// PWA MANIFEST — PNG icons (bukan SVG) agar Android accept
 // ============================================================
 (function injectManifest() {
+  const IC192 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAADEUlEQVR4nO3TwW2kRRhF0Y6EFVFMiCRFYCxALJAQBuzx2P1cdc8nnX13/e8+HuP76dsvv9O13t9Tbv3InGm923ff+uG403rXr976gWhY7/zFrR+EpvXuDZ8vwfjJM37yDB++fVII6z8F38P4yTN+8gRAmvGTZ/zkGT95AiDN+MkTAGnGT54ASDN+8gRAmgBIEwBpxk+eAEgTAGkCIE0ApAmANAGQZvzkCYC0KwNwH3vr7ykAAUxv/T0FIIDprb+nAAQwvfX3FIAAprf+ngIQwPTW31MAApje+nsKQADTW39PAQhgeuvvKQABTG/9PQXwSQGsfyd7AiBNAKQJgDQBkCYA0gRAmgBIEwBpAiBNAKQJgDQBkCYA0gRAmgBIEwBpAiBNAKQJgDQBkCYA0gRAmgBIEwBpAiBNAKSlA7jl1u99MgFccOv3PpkALrj1e59MABfc+r1PJoALbv3eJxPABbd+75MJ4IJbv/fJBHDBrd/7ZAK44NbvfTIBXHDr9z5ZOoD172RPAKQJgDQBkCYA0gRAmgBIEwBpAiBNAKQJgDQBkCYA0gRAmgBIEwBpAiBNAKQJgDQBkCYA0gRAmgBIEwBpAiBNAKQJgDQBkCYA0gRAmgBIEwBpAiBNAKQJgDQBkCYA0q4MAN5KAKQJgDQBkCYA0gRAmgBIEwBpAiBNAKQJgDQBkCYA0gRAmgBIEwBpxwTw268/c4j1VgSAAASAAASAAASAAASAAE4OAD6DAEgTAGkCIE0ApAmANAGQJgDSBECaAEgTAGkCIE0ApAmANAGQJgDSBECaAEgTAGkCIO3x561/BCw8/rr1D4EFAZAmANIEQJoASBMAaY+/3/rHwDM9/nnrHwTPJADSBEDaiwBEQMW/jl8AVPxnACLgdv87fgFwu1cDEAG3etP4BcCt3hyACLjNd41fBNzkXeMXATf4ofELgNP9cAAi4FQfMn4RcKIPHb8IOMmnjF8IfHWfPnwR8FU9dfwi4CuZjF8IrK13/+LWD0LDeuev3vqBuNN61+++9cNxpvVun3LrR6Y98j8AQiS+557e+5kAAAAASUVORK5CYII=';
+  const IC512 = 'data:image/png;base64,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';
   const manifest = {
     name: 'Fazprint Attendance',
     short_name: 'Fazprint',
     description: 'Aplikasi absensi dan penggajian Fazprint Kudus',
-    start_url: '/',
+    start_url: './',
+    scope: './',
     display: 'standalone',
-    background_color: '#f0f4ff',
+    background_color: '#1e3a8a',
     theme_color: '#1e40af',
-    orientation: 'portrait',
+    orientation: 'portrait-primary',
+    lang: 'id',
     icons: [
-      { src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='32' fill='%231e3a8a'/%3E%3Ctext x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial Black' font-weight='900' font-size='72' fill='white'%3EF%3C/text%3E%3Ctext x='50%25' y='82%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='24' fill='%23fbbf24'%3Eprint%3C/text%3E%3C/svg%3E", sizes: '192x192', type: 'image/svg+xml' },
-      { src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%231e3a8a'/%3E%3Ctext x='50%25' y='52%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial Black' font-weight='900' font-size='200' fill='white'%3EF%3C/text%3E%3Ctext x='50%25' y='80%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='64' fill='%23fbbf24'%3Eprint%3C/text%3E%3C/svg%3E", sizes: '512x512', type: 'image/svg+xml' }
+      { src: IC192, sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+      { src: IC512, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
     ]
   };
-  const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('link');
-  link.rel = 'manifest';
-  link.href = url;
-  document.head.appendChild(link);
+  const mBlob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+  const mUrl = URL.createObjectURL(mBlob);
+  const mLink = document.createElement('link');
+  mLink.rel = 'manifest'; mLink.href = mUrl;
+  document.head.appendChild(mLink);
+  // Apple touch icon
+  const aLink = document.createElement('link');
+  aLink.rel = 'apple-touch-icon'; aLink.href = IC192;
+  document.head.appendChild(aLink);
 })();
 
 // ============================================================
