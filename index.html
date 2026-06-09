@@ -749,7 +749,7 @@ const load = (key, def) => { try { const v = localStorage.getItem(key); return v
 const save = (key, val) => { try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) { console.warn('Storage full', e); } };
 
 // Settings
-const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbxWdu2dZt7guMGhk0JiMNm8Ssq_1xmHAOycIgkKQtCuD3AcQqs2TwItdDqS9QMUluDEDQ/exec';
+const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbzfEPSW3M3DMm95ejd-7NMJo78AkxgKfJ0nk0rTPlMf2dab0vohvo6cb53nHQuFPp6NMg/exec';
 let settings = load('fazprint_settings', {
   gasUrl: DEFAULT_GAS_URL,
   jamBukaAbsen: '07:45',
